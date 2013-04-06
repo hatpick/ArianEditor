@@ -1,0 +1,569 @@
+html, body
+  background-color: #ebebeb
+  width: 100%  
+  height: 100%  
+  padding-left: 0
+  padding-right: 0
+  -webkit-user-select: none
+  -moz-user-select: none
+  
+a:hover
+  text-decoration: none
+
+div
+  background-color: transparent
+
+a img
+  max-width: none
+  height: 20px
+
+.inlet_slider
+  width: 200px
+  outline: none !important
+
+.center
+  text-align:center
+  vertical-align: middle
+  
+.container
+  height: 100%
+  vertical-align: middle
+
+.container-fluid
+  padding-left: 0
+  padding-right: 0
+
+.sidebar-nav
+  padding: 9px 0
+
+.dropdown-menu .sub-menu
+  left: 100%
+  position: absolute
+  top: 0
+  visibility: hidden
+  margin-top: -1px
+
+.dropdown-menu li:hover .sub-menu
+  visibility: visible
+  display: block
+
+.navbar .sub-menu:before
+  border-bottom: 7px solid transparent
+  border-left: none
+  border-right: 7px solid rgba(0, 0, 0, 0.2)
+  border-top: 7px solid transparent
+  left: -7px
+  top: 10px
+
+.navbar .sub-menu:after
+  border-top: 6px solid transparent
+  border-left: none
+  border-right: 6px solid #fff
+  border-bottom: 6px solid transparent
+  left: -6px
+  top: 11px
+  
+#syncing-status
+  margin-left: 10px
+  color: rgba(255,255,255,0.6)  
+  height:18px
+
+#localCast  
+  width: 60%
+  margin: 0 auto
+  height: 245px
+
+#remoteCasts
+  text-align: left
+  margin-left: 5px
+  margin-right: 5px
+  height: 125px
+  overflow-x: auto
+  overflow-y:hidden  
+
+.preview_iframe
+  width: 100%
+  height: 100%
+  border: 0px 
+  
+#right-items
+  top: 94px
+  border-left: 1px solid #ddd !important
+  background-color: #f8f8f8 !important
+  width: 15px !important
+  position: absolute
+  margin-left: -3 px;
+  display: none
+
+.lint-error
+  background: #ffa
+  color: #a00
+  padding: 2px 5px 3px
+
+.lint-error-icon
+  color: white
+  background-color: red
+  font-weight: bold
+  border-radius: 50%
+  padding: 0 3px
+  margin-right: 7px
+   
+.btn-ntfc
+  -webkit-border-radius: 200px
+
+.CodeMirror-scroll
+  height: 100%
+
+.CodeMirror-bookmarksIconError
+  height: 1px
+  background-color: rgba(204, 0, 0, 0.3) 
+  position: relative
+  cursor: pointer
+  border: 1px solid #CC0000
+  
+.CodeMirror-bookmarksIconComment  
+  height: 1px
+  background-color: rgba(237, 209, 55, 0.3) 
+  position: relative
+  cursor: pointer   
+  border: 1px solid #EDD137
+  
+.CodeMirror-bookmarksIconLockedCode
+  height: 1px
+  background-color: rgba(52, 126, 224, 0.3)
+  position: relative
+  cursor: pointer
+  border: 1px solid #347EE0
+  
+.CodeMirror-commentsGutter
+  width: 200px  
+  font: Helvetica
+  background-color: #fff
+  border-right: 1px solid #dbdbdb
+
+.CodeMirror-lockedCodeGutter
+  width: 1px
+
+.CodeMirror-erroricon
+  border-radius: 10px
+  width: 8px
+  height: 8px
+  margin-left: 1px !important
+  color: #900
+
+.CodeMirror-commentsiconsGutter
+  width: 16px
+  margin-left: 1px !important
+
+.CodeMirror-commentsicons  
+  outline: none    
+  background-image: url('../img/comments-icon.png')
+  height: 14px
+  width: 14px
+
+.CodeMirror-commentitem
+  text-aling : justify
+  margin : 1px
+  -webkit-border-radius : 2px
+  background-color : #fefefe
+  border : 1px solid #fdfdfd
+  
+.lockedCodeMarker
+  background-color: rgba(52, 126, 224, 0.4) !important
+  background-image: url('../img/code-lock.png')
+  background-repeat: no-repeat  
+  background-position: right
+
+.left-splitter
+  width: 5px
+  float: left
+  left: 207px
+  background-color: #B2B2B2
+
+.left-splitter-collapse-button
+  position: relative
+  cursor: pointer
+  width: 7px
+  left: -1px
+  height: 30px
+  -webkit-border-radius: 5px
+  background-color: #666666
+
+.left-splitter-collapse-button:hover
+  background-color: #1A1A1A
+
+.right-splitter
+  position: absolute
+  width: 5px
+  float: left
+  background-color: #B2B2B2
+
+.right-splitter-collapse-button
+  position: relative
+  cursor: pointer
+  width: 7px
+  height: 30px
+  left: -1px
+  -webkit-border-radius: 5px
+  background-color: #666666
+
+.right-splitter-collapse-button:hover
+  background-color: #1A1A1A
+
+.small-console-animated
+  height: 200px
+  
+.chatMsg
+  width: 185px
+  resize: none  
+  rows: 5
+  
+.cu-list
+  width:195px            
+  margin: 5px     
+  text-align:center
+  overflow-x: hidden
+  overflow-y: auto
+  list-style-type: none    
+
+.cu-status-available
+  width: 12px
+  height: 12px
+  -webkit-border-radius: 10px
+  border : 1px solid #fefefe    
+  background-color: #00CC00
+
+.cu-status-available-video
+  width: 16px
+  height: 10px
+  background-image: url('../img/icon_videochat.png')
+
+.cu-status-busy
+  width: 12px
+  height: 12px
+  -webkit-border-radius: 10px  
+  border : 1px solid #fefefe
+  background-color: #FF0000
+  
+.cu-item
+  padding: 5px
+  
+.cu-item:hover
+  background-color: #E6E6E6    
+
+[class*="span"], .row-fluid [class*="span"]
+  float: left
+
+[class*="icon-"]
+  margin: 0 5px 0 5px
+
+.close
+  position: relative
+  left: 4px
+  top: -3px
+
+.hideComment
+  visibility: hidden
+
+.hideComment:hover
+  visibility: visible  
+
+.CodeMirror
+  // height: 100%
+  font-size: 14px
+  background-color: #FFFFFF
+  opacity: .95
+
+.CodeMirror-wrap
+  height: 100%
+
+.CodeMirror-gutter
+  font-size: 14px
+
+.folder-html
+  background: url(../img/folder-html.png) 0 0 no-repeat
+  padding: 1px 0 1px 16px
+
+.folder-css
+  background: url(../img/folder-css.png) 0 0 no-repeat
+  padding: 1px 0 1px 16px
+
+.folder-js
+  background: url(../img/folder-js.png) 0 0 no-repeat
+  padding: 1px 0 1px 16px
+
+
+.ui-dialog .ui-dialog-buttonpane .ui-dialog-buttonset
+  float: center
+
+.ui-dialog-buttonset
+  text-align: center
+
+#project
+  background-color: #FFFFFF
+  
+#chat
+  background-color: #FFFFFF  
+
+#shareDoc
+  background: transparent
+  border: 0
+  color: #FFFFFF
+  cursor: pointer
+
+#chatMessages
+  overflow-y: auto
+  overflow-x: hidden
+
+#shareDoc span
+  margin-left: 5px
+
+.navbar
+  margin-bottom: 0
+
+.navbar-inner
+  background-image: transparent
+
+.tabbable
+  height: 100%
+
+#left-items
+  margin: 0 0 0 5px
+  min-width: 205px
+  overflow: hidden
+  -webkit-user-select: none
+  -moz-user-select: none
+
+#editor-area
+  position: absolute
+  margin-left: 5px
+  margin-right: 5px
+  min-width: 500px
+
+#editor-area .tab-content
+  border: 1px solid #D1D1D1
+
+#editor
+  padding: 0
+  width: 100%
+  height: 750px
+
+#editor-comment-temp
+  width: 100%    
+  height: 100%
+  top: 0px
+  margin-left: 5px
+  margin-right: 5px  
+  overflow-x: hidden
+  overflow-y: scroll
+
+#editor-comment-area
+  width: 100%      
+  background-color: #FAFAFA  
+  -webkit-user-select: auto
+  -moz-user-select: auto  
+  text-align: center
+
+#editor-comment-area-title
+  width: 100%    
+  height: 50px;      
+  font-weight: bold  
+  text-align: center
+  padding-top: 2px
+
+#chat-start
+  margin-top: 10px
+  
+.comment      
+  font-family: "Helvetica Neue",Helvetica,Arial,sans-serif
+  border: 1px solid #d9d9d9   
+  width: 180px
+  height: 150px  
+  z-index: 500 !important
+  outline: none !important
+  -webkit-user-select: auto
+  -moz-user-select: auto
+  display : none
+  background-color : #feef9c
+  -webkit-box-shadow : 2px 2px 10px #000
+  -moz-box-shadow : 2px 2px 10px #000
+  margin-left : 5px !important
+
+.commentContent
+  overflow-y: auto
+  overflow-x: hidden 
+  height: 100px
+  text-align: left
+  
+.commentMentionTag
+  text-decoration:none
+  font-size: 9px
+  font-color: #3399FF
+
+     
+.commentEntry  
+  text-align: center  
+  
+.commentEntry>input
+  font-size: 9px 
+  
+.commentMarker
+  background-color: rgba(237, 209, 55, 0.6) !important
+      
+.errorMarker
+  background-color: rgba(255, 204, 204, 0.7) !important
+
+#comment img
+  width: 24px
+  height: 24px
+  float: left
+  position: relative
+
+#comment div
+  background-color: white
+  font-size: 12px
+  font-weight: bold
+
+#comment div div
+  font-size: 12px
+  font-weight: bold
+
+#comment-name
+  font-size: 12px
+  font-weight: bold
+  margin-left: 32px
+
+#comment-time
+  margin: 3px 0 0 32px
+  font-size: 11px
+  color: #666
+
+#small-console
+  display: block
+  position: relative
+  height: 20px
+  z-index: 11
+  -webkit-transition: all .5s ease
+  -webkit-border-radius: 2px 2px 0 0
+  padding-top: 3px
+  background: -webkit-gradient(linear, 0% 0%, 0% 100%, from(#666666), to(#666666), color-stop(0.6, #333333))
+  
+//Chat Section
+.chatbox
+  position: fixed
+  position:expression("absolute")
+  width: 225px
+  display:none
+
+.chatboxhead
+  background-color: #0088cc
+  padding:7px
+  color: #ffffff
+  border-right:1px solid #0088cc
+  border-left:1px solid #0088cc
+  -webkit-border-top-left-radius: 6px;
+  -webkit-border-top-right-radius: 6px;
+
+.chatboxblink
+  background-color: #176689
+  border-right:1px solid #176689
+  border-left:1px solid #176689
+
+.chatboxcontent  
+  font-size: 13px
+  color: #333333
+  height:200px
+  width:209px
+  overflow-y:auto
+  overflow-x:auto
+  padding:7px
+  border-left:1px solid #cccccc
+  border-right:1px solid #cccccc
+  border-bottom:1px solid #eeeeee
+  background-color: #ffffff
+  line-height: 1.3em
+
+.chatboxinput
+  padding: 5px
+  background-color: #ffffff
+  border-left:1px solid #cccccc
+  border-right:1px solid #cccccc
+  border-bottom:1px solid #cccccc
+
+.chatboxtextarea
+  width: 206px
+  height:44px
+  padding:3px 0pt 3px 3px
+  border: 1px solid #eeeeee
+  margin: 1px
+  overflow:hidden
+  resize: none
+
+.chatboxtextareaselected
+  border: 2px solid #f99d39
+  margin:0
+
+.chatboxmessage
+  margin-left:1em
+
+.chatboxinfo
+  margin-left:-1em
+  color:#666666
+
+.chatboxmessagefrom
+  margin-left:-1em
+  font-weight: bold
+
+.chatboxmessagecontent
+
+.chatboxoptions
+  float: right
+
+.chatboxoptions a
+  text-decoration: none
+  color: white
+
+.chatboxtitle
+  float: left
+
+.notification-count
+  display: none
+  position: fixed
+  height: 12px
+  width: 10px
+  right: 115px     
+  top: 0px     
+  background-color:#FF0000
+  color:#fff  
+  padding-bottom: 4px
+  pading-right: 1px  
+  font-size:9px
+  font-weight:bold
+  border-radius: 2px
+  border: 1px solid #FF4444
+  border-bottom-color: #BB0000
+  border-right-color: #BB0000
+
+.notification-a
+  text-decoration:none  
+
+.notification-user-a
+  @extends .notification-a
+  color: #3a87ad  
+
+.notification-project-a
+  @extends .notification-a
+  color: #3a87ad;
+  
+
+.notification-folder-a
+  @extends .notification-a
+  color: #3a87ad;
+
+.notification-file-a
+  @extends .notification-a
+  color: #3a87ad;
+
+.notification-comment-a
+  @extends .notification-a
+  color: #3a87ad;
