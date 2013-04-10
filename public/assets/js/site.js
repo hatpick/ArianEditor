@@ -1,12 +1,13 @@
 var errBookmarks = [];
 var commentBookmarks = [];
 var lockedCodeBookmarks = [];
+var requestNotificationBookmarks = [];
 var errorIcons = [];
 var widgets = [];
 var markedText = [];
 var sideComments = [];
 var lockedCodes = [];
-var currentDocumentPath = null;
+var requestNotificationCodes = [];
 
 var refresh_prepare = 1;
 var functions = [];
@@ -57,6 +58,41 @@ function startPublishing() {
         // Pass the replacement div id and properties
         session.publish(publisher);
     }
+}
+
+function localNotify(message, type) {
+    var options = {
+        text : message,
+        template : '<div class="noty_message"><span class="noty_text"></span><div class="noty_close"></div></div>',
+        type : type,
+        dismissQueue : true,
+        layout : 'top',
+        timeout : 3000,
+        closeWith : ['button'],
+        buttons : false
+    };
+    var ntfcn = noty(options);
+}
+
+function saveCodeXML(editor, ntfn) {
+    //$("#syncing-status").html("Saving...");
+    var sid = sessionStorage.getItem("docName");
+    var project_name = sessionStorage.getItem('project');        
+    var xmlDoc = codeToXML(editor);
+    var url = '/project/' + project_name + '/saveXML';
+    var date = new Date();
+
+    $.post(url, {
+        "owner" : now.user.user,
+        "snapshot" : xmlDoc,
+        "content" : editor.getValue(),            
+        "shareJSId" : sid,
+        "timestamp" : date,
+    }, function(data) {
+        if (ntfn)
+            localNotify('Successfully saved the document.', 'success');
+        //$("#syncing-status").html("Last saved on " + date.toLocaleString());
+    }, 'json');
 }
 
 function stopPublishing() {
@@ -203,10 +239,9 @@ function extractFunctions(obj, functions) {
 }
 
 function tempLoadXml() {
-    var pname = sessionStorage['project'];
-    var sid = sessionStorage['docName'];
+    var pname = sessionStorage['project'];    
 
-    var url = '/project/loadXML/' + sid;
+    var url = '/project/' + pname + 'loadXML/';
     console.log(url);
 
     $.get({
@@ -289,7 +324,7 @@ function updateHints(editor) {
         for (var i = 0; i < errBookmarks.length; ++i) {
             $(errBookmarks[i].dom).remove();
         }
-                
+
         errBookmarks.length = 0;
         errorIcons.length = 0;
 
@@ -302,7 +337,7 @@ function updateHints(editor) {
             $(bm.dom).tooltip({
                 title : err.line + ": " + err.reason,
                 placement : "left"
-            });            
+            });
         }
     });
 }
@@ -312,20 +347,46 @@ function lockCode(lockedCode, lcid, cm) {
         className : "gooz",
         readOnly : true
     });
+            
     $.each(mt.lines, function(i, line) {
         cm.addLineClass(line, "wrap", "lockedCodeMarker");
+        var lcIcon = $("<div>").attr({"tabindex" : "-1", "id": lcid}).addClass("lockedCodeMarker-Icon").tooltip({
+            title : "Code has been locked by " + lockedCode.who + "!"
+        });
+        cm.setGutterMarker(lockedCode.from.line + i, "CodeMirror-lockedCodeGutter", lcIcon.get(0));        
     });
-
-    addBookmarks("lockedCode", lockedCode.from.line, lcid, cm);
-
-    //var lcIcon = $("<div>").attr("id", lcid);
-    //myCodeMirror.setGutterMarker(lockedCode.from.line, "CodeMirror-lockedCodeGutter", lcIcon.get(0));
-
+    
+    addBookmarks("lockedCode", lockedCode.from.line, lcid, cm);    
+            
     markedText.push(mt);
     cm.setCursor(lockedCode.from);
     lockedCodes.push(lockedCode);
 
     saveCodeXML(myCodeMirror, false);
+}
+
+
+function requestNotification(requestNotificationCode, ntid, cm) {    
+    var mt = cm.markText(requestNotificationCode.from, requestNotificationCode.to, {
+        className : "chos",
+        readOnly : true
+    });
+           
+    $.each(mt.lines, function(i, line) {
+        cm.addLineClass(line, "wrap", "notificationRequestMarker");
+        var nfIcon = $("<div>").attr({"tabindex" : "-1", "id": ntid}).addClass("notificationRequestMarker-Icon").tooltip({
+            title : "Notification has been requested by " + requestNotificationCode.who + "!"
+        });
+        cm.setGutterMarker(requestNotificationCode.from.line + i, "CodeMirror-requestNotificationGutter", nfIcon.get(0));        
+    });
+    
+    addBookmarks("requestNotification", requestNotificationCode.from.line, ntid, cm);    
+            
+    markedText.push(mt);
+    cm.setCursor(requestNotificationCode.from);
+    requestNotificationCodes.push(requestNotificationCode);
+
+    //saveCodeXML(myCodeMirror, false);
 }
 
 function arian(string, context) {
@@ -365,18 +426,16 @@ function editor(id, mode) {
         lineWrapping : true,
         extraKeys : {
             "Ctrl-Space" : "autocomplete"
-        },
-        syntax : "html",
+        },        
         autoCloseTags : true,
-        matchBrackets : true,
-        profile : "xhtml",
-        autoCloseBrackets : true,        
+        matchBrackets : true,        
+        autoCloseBrackets : true,
         onKeyEvent : function() {
             return zen_editor.handleKeyEvent.apply(zen_editor, arguments);
         },
-        gutters : ["CodeMirror-commentsGutter", "CodeMirror-commentsiconsGutter", "CodeMirror-lockedCodeGutter", "CodeMirror-linenumbers"]
-    });
-
+        gutters : ["CodeMirror-commentsGutter", "CodeMirror-commentsiconsGutter", "CodeMirror-lockedCodeGutter", "CodeMirror-requestNotificationGutter", "CodeMirror-linenumbers"]
+    });                       
+    
     Inlet(_editor);
 
     return _editor;
@@ -442,6 +501,14 @@ function getLineByLCID(lcid) {
     return -1;
 }
 
+function getLineByNTID(ntid) {
+    var ln = $("#" + ntid).parent().parent().children()[0].innerHTML;
+    ;
+    if (ln !== undefined)
+        return ln;
+    return -1;
+}
+
 function getBookmarkPosition(ln) {
     var bookmarkHeight = $("#bookmarksArea").height();
     var editorHeight = myCodeMirror.lineCount();
@@ -470,7 +537,12 @@ function addBookmarks(type, dln, vid, cm) {
         marker = "lockedMarker";
         className = "CodeMirror-bookmarksIconLockedCode";
         notError = true;
-    }
+    } else if (type === 'requestNotification') {
+        bookmarks = requestNotificationBookmarks;
+        marker = "requestNotificationMarker";
+        className = "CodeMirror-bookmarksIconRequestNotification";
+        notError = true;
+    }    
     var bookmark = $("<div>").attr("vid", vid).addClass(className).attr("data-line", dln).css("top", top).click(function(e) {
         var cname = $(this).attr("class").substring(24);
         var vid = $(this).attr("vid");
@@ -479,8 +551,10 @@ function addBookmarks(type, dln, vid, cm) {
             line = getLineByCID(vid) - 1;
         else if (cname === 'LockedCode')
             line = getLineByLCID(vid) - 1;
+        else if (cname === 'RequestNotification')
+            line = getLineByNTID(vid) - 1;    
         clearMarker(cm, cname);
-        if (type !== 'lockedCode')
+        if (type !== 'lockedCode' && type !== 'requestNotification')
             cm.addLineClass(line, "wrap", marker);
         cm.setCursor({
             line : line,
@@ -513,7 +587,7 @@ function codeToXML(editor) {
         return "";
     var codeHTML = [];
 
-    var rootDocument = $("<code>").attr("id", currentDocumentPath);
+    var rootDocument = $("<code>").attr("id", sessionStorage["docName"]);
     var codeDocument = editor.doc;
     codeDocument.iter(0, codeDocument.size, function(line) {
         codeHTML.push(line);
@@ -521,47 +595,55 @@ function codeToXML(editor) {
 
     for (var index = 0; index < codeHTML.length; ) {
         var codeLine = codeHTML[index];
-        if ( typeof codeLine.wrapClass !== 'undefined') {
-            switch(codeLine.wrapClass) {
-                //TODO add cid, lid
-                //TODO comment inside locked code
-                case 'commentMarker commentMarkerInvisible':
-                    var cid = '';
-                    var commentNode = $("<comment>").attr("id", cid).append($("<l>").text(codeLine.text));
-                    index++;
+        if (typeof codeLine.gutterMarkers !== 'undefined') {            
+            if (codeLine.gutterMarkers["CodeMirror-commentsGutter"] !== undefined) {
+                var cid = $(codeLine.gutterMarkers["CodeMirror-commentsGutter"]).attr("id");
+                var commentNode = $("<comment>").attr("id", cid).append($("<l>").text(codeLine.text));
+                index++;
+                $(rootDocument).append(commentNode);
+                continue;
+                //TODO: Comment in locked code
+            } else if (codeLine.gutterMarkers["CodeMirror-lockedCodeGutter"] !== undefined) {
+                var lid = $(codeLine.gutterMarkers["CodeMirror-lockedCodeGutter"]).attr("id");
+                var lockedCodeNode = $("<lockedCode>").attr("id", lid);
+                var codeText = "";
+                var j = index, tempLine = codeLine;
+                while (tempLine.gutterMarkers !== undefined && tempLine.gutterMarkers["CodeMirror-lockedCodeGutter"] !== undefined) {
+                    $(lockedCodeNode).append($("<l>").text(tempLine.text));
+                    j++;
+                    if (j < codeHTML.length)
+                        tempLine = codeHTML[j];
+                    else
+                        break;
+                }
+                index = j;
 
-                    $(rootDocument).append(commentNode);
-                    break;
-                case 'commentMarkerInvisible':
-                    var cid = '';
-                    var commentNode = $("<comment>").attr("id", cid).text(codeLine.text);
-                    index++;
+                $(rootDocument).append(lockedCodeNode);
+                continue;
+            } else if (codeLine.gutterMarkers["CodeMirror-requestNotificationGutter"] !== undefined) {
+                var ntid = $(codeLine.gutterMarkers["CodeMirror-requestNotificationGutter"]).attr("id");
+                var lockedCodeNode = $("<requestNotification>").attr("id", ntid);
+                var codeText = "";
+                var j = index, tempLine = codeLine;
+                while (tempLine.gutterMarkers !== undefined && tempLine.gutterMarkers["CodeMirror-requestNotificationGutter"] !== undefined) {
+                    $(lockedCodeNode).append($("<l>").text(tempLine.text));
+                    j++;
+                    if (j < codeHTML.length)
+                        tempLine = codeHTML[j];
+                    else
+                        break;
+                }
+                index = j;
 
-                    $(rootDocument).append(commentNode);
-                    break;
-                case 'lockedCodeMarker':
-                    var lid = '';
-                    var lockedCodeNode = $("<lockedCode>").attr("id", lid);
-                    var codeText = "";
-                    var j = index, tempLine = codeLine;
-                    while (tempLine.wrapClass === 'lockedCodeMarker') {
-                        $(lockedCodeNode).append($("<l>").text(tempLine.text));
-                        j++;
-                        if (j < codeHTML.length)
-                            tempLine = codeHTML[j];
-                        else
-                            break;
-                    }
-                    index = j;
-
-                    $(rootDocument).append(lockedCodeNode);
-                    break;
+                $(rootDocument).append(lockedCodeNode);
+                continue;
             }
+            
         } else {
             var pureCodeNode = $("<pureCode>");
             var codeText = "";
             var j = index, tempLine = codeLine;
-            while ( typeof tempLine.wrapClass === 'undefined') {
+            while (typeof tempLine.gutterMarkers === 'undefined') {
                 $(pureCodeNode).append($("<l>").text(tempLine.text));
                 j++;
                 if (j < codeHTML.length)
@@ -574,7 +656,6 @@ function codeToXML(editor) {
             $(rootDocument).append(pureCodeNode);
         }
     }
-
     return $(rootDocument)[0].outerHTML;
 }
 
@@ -622,56 +703,11 @@ function _logout(options) {
 }
 
 function reportFailure(report, cm) {
-    var errors = $("#small-console div");
-    var item;
-    errors[0].innerHTML = "";
-    errors.append(arian(editorMessage.errorMessage, {
-        message : "JSHint has found " + report.errors.length + " potential problems in your code."
-    }));
-    for (var i = 0, err; err = report.errors[i]; i++) {
-        if (!err.scope || err.scope === "(main)") {
-            errors.append(arian('<li><p>' + templates.error + '</p></li>', {
-                line : err.line,
-                code : err.evidence ? escapeHTML(err.evidence) : '&lt;no code&gt;',
-                msg : err.reason
-            }));
-            // var bm = addBookmarks("error", err.line, cm);
-            // $(bm.dom).tooltip({title: err.reason, placement: "left"});
-        } else {
-            errors.append(arian("<li><p>" + templates.error + "</p></li>", {
-                line : err.line,
-                character : err.character,
-                code : $.trim(err.evidence) ? $.trim(escapeHTML(err.evidence)) : "",
-                msg : err.reason
-            }));
-            // var bm = addBookmarks("error", err.line, cm);
-            // $(bm.dom).tooltip({title: err.reason, placement: "left", delay: {show: 100, hide: 500}});
-        }
-        $("a[data-line=" + err.line + "]").bind("click", function(ev) {
-            var line = $(this).attr("data-line") - 1;
-            var str = cm.getLine(line);
-            cm.setSelection({
-                line : line,
-                ch : 0
-            }, {
-                line : line,
-                ch : str.length
-            });
-            scrollTo(0, 0);
-        });
-    }
-    $("#small-console").append(errors);
-    $("#small-console").toggleClass("small-console-animated");
+    
 }
 
 function reportSuccess(report) {
-    var success = $("#small-console div");
-    success[0].innerHTML = "";
-    success.append(arian(editorMessage.successMessage, {
-        message : "Good job! JSHint hasn't found any problems with your code."
-    }));
-    $("#small-console").append(success);
-    $("#small-console").toggleClass("small-console-animated");
+    
 }
 
 // function randomDocName (length) {
@@ -707,34 +743,16 @@ $.fn.usedHeight = function() {
 };
 
 var layout = function() {
-    var _height = document.documentElement.clientHeight - $(".navbar").height() - 20;
-    $("#chatArea>table>tbody>tr:first").height(_height - 160);
+    var _height = document.documentElement.clientHeight - $(".navbar").height();
     $("#editor-area").height(_height);
-    $("#left-items").height(_height);
-    $(".left-splitter").height(_height);
-    $(".left-splitter-collapse-button").css("margin-top", _height / 2);
-    $(".tab-pane").css("height", "100%");
     $("#right-items").height(_height - 52);
     $("#right-items>div").height(_height - 52);
-    $("#editor-area").css("left", $(".left-splitter").position().left + $(".left-splitter").usedWidth());
-    $("#editor-area").css("width", document.documentElement.clientWidth - 10 - ($("#left-items").is(":visible") ? $("#left-items").usedWidth() : 0) - $(".left-splitter").usedWidth() - 15);
-
-    if ($("#left-items").is(":visible")) {
-        $("#right-items").css("left", $("#left-items").usedWidth() + $(".left-splitter").usedWidth() + $("#editor-area").usedWidth());
-        $("#right-items").css("width", 15);
-    } else {
-        $("#right-items").css("left", $(".left-splitter").usedWidth() + $("#editor-area").usedWidth());
-    }
-
-    _height = $("#left-items").height() - $("#nav-tab").height() - parseInt($("#nav-tab").css("margin-bottom"), 10);
-    $(".tab-content").height(_height);
-    // _height = document.documentElement.clientHeight - $(".navbar").height() - 20;
-    $(".CodeMirror-wrap").height($("#project").height());
-    if ($("button[data-action=editor-livepreview-toggle]").attr("data-status") === "on") {
-        $("#live_preview_window").height($("#project").height());
-        //TODO change width of editor, preview window
-    }
-
+    $(".tab-pane").css("height", "100%");    
+    $("#editor-area").css("left", 10);
+    $("#editor-area").css("width", document.documentElement.clientWidth - 30);
+    $("#right-items").css("left", $("#editor-area").usedWidth() - 10);
+    //Just in case
+    $(".CodeMirror-wrap").height(_height);
 };
 
 $(window).resize(function() {
@@ -778,11 +796,7 @@ $(document).ready(function() {
 
     var editor_contextmenu = [{
         'Add Comment' : {
-            onclick : function(menuItem, menu) {
-                // alert("You clicked me!");
-                // var cursor = myCodeMirror.getCursor();
-                // var line = cursor.line;
-                // var ch = cursor.ch;
+            onclick : function(menuItem, menu) {                
                 var cursor = myCodeMirror.coordsChar(cmPosition);
 
                 createComment(cursor.line + 1, null, "You");
@@ -794,21 +808,58 @@ $(document).ready(function() {
                 if (myCodeMirror.somethingSelected()) {
                     var lockedCode = {};
                     lockedCode.lcid = uuid.v4();
-                    lockedCode.from = myCodeMirror.view.sel.from;
-                    lockedCode.to = myCodeMirror.view.sel.to;
-                    lockedCode.who = now.user.user;
-                    lockedCode.path = currentDocumentPath;
+                    lockedCode.from = myCodeMirror.doc.sel.from;
+                    lockedCode.to = myCodeMirror.doc.sel.to;
+                    lockedCode.who = now.user.user;                    
                     lockedCode.timestamp = ts = new Date();
                     var tsstring = "On " + ts.toDateString() + " at " + ts.toLocaleTimeString();
-                    lockCode.tsstring = tsstring;
+                    lockedCode.tsstring = tsstring;
+                    lockedCode.pname = sessionStorage['project'];
                     lockedCode.content = myCodeMirror.getRange(lockedCode.from, lockedCode.to);
                     lockCode(lockedCode, lockedCode.lcid, myCodeMirror);
                     now.sendLockedCode(lockedCode);
                 }
             },
             icon : "assets/img/code-lock.png"
+        },
+        'Watch Code' : {
+            onclick : function(menuItem, menu) {
+                if (myCodeMirror.somethingSelected()) {
+                    var notificationRequest = {};
+                    notificationRequest.ntid = uuid.v4();
+                    notificationRequest.from = myCodeMirror.doc.sel.from;
+                    notificationRequest.to = myCodeMirror.doc.sel.to;
+                    notificationRequest.who = now.user.user;
+                    //TODO: multiple users                    
+                    notificationRequest.timestamp = ts = new Date();
+                    var tsstring = "On " + ts.toDateString() + " at " + ts.toLocaleTimeString();
+                    notificationRequest.tsstring = tsstring;
+                    notificationRequest.pname = sessionStorage['project'];                    
+                    requestNotification(notificationRequest, notificationRequest.ntid, myCodeMirror);
+                    now.sendNotificationRequest(notificationRequest);
+                }                                            
+            },
+            icon : "assets/img/notifReq-icon.png"
         }
     }];
+    
+    var editor_contextmenuPrime = [{
+        'Remove Comment' : {
+            onclick : function(menuItem, menu) {                
+                var cursor = myCodeMirror.coordsChar(cmPosition);
+                //Remove Comment only by owner
+            },
+            icon : "assets/img/comments-icon.png"
+        },
+        'Unlock Code' : {
+            onclick : function(menuItem, menu) {
+                var cursor = myCodeMirror.coordsChar(cmPosition);
+                //Unlock code by owner only
+            },
+            icon : "assets/img/code-lock.png"
+        }
+    }];
+    
     ns.sendNotification = function(notyMsg, notyType, needRefresh, type) {
         now.sendNotification(notyMsg, notyType, needRefresh, type);
         return false;
@@ -892,7 +943,7 @@ $(document).ready(function() {
     var cursorsDom = {};
     now.receiveCursors = function(cursors) {
         $.each(cursors, function(cursor, index) {
-            if (cursors[cursor].path !== currentDocumentPath || cursors[cursor].sid === now.core.clientId)
+            if (cursors[cursor].sid === now.core.clientId)
                 return;
             if (cursorsDom[cursor])
                 cursorsDom[cursor].clear();
@@ -905,51 +956,39 @@ $(document).ready(function() {
     now.receiveComment = function(comment, cid) {
         if (comment.sid === now.core.clientId) {
             return;
-        }
-        if (currentDocumentPath === comment.path) {
-            appendComment(comment.cid, comment.content, comment.who, comment.line, comment.timestamp, false);
-        }
+        }        
+        appendComment(comment.cid, comment.content, comment.who, comment.line, comment.timestamp, false);
+        
     }
 
     now.receiveLockedCode = function(lockedCode, sid) {
         if (sid === now.core.clientId)
-            return;
-        if (currentDocumentPath === lockedCode.path) {
-            lockCode(lockedCode, lockedCode.cid, myCodeMirror);
-        }
+            return;       
+        lockCode(lockedCode, lockedCode.cid, myCodeMirror);
+        
     }
-
-    now.executePauseCommand = function(path, sid) {
+    
+    now.receiveNotificationRequest = function(requestNotification, sid) {
         if (sid === now.core.clientId)
-            return;
-        if (currentDocumentPath === path) {
-            myCodeMirror.setOption("readOnly", true);
-        }
+            return;       
+        requestNotification(requestNotification, requestNotification.ntid, myCodeMirror);
+        
     }
-
-    now.executeResumeCommand = function(path, sid) {
+    now.executePauseCommand = function(sid) {
         if (sid === now.core.clientId)
-            return;
-        if (currentDocumentPath === path) {
-            myCodeMirror.setOption("readOnly", false);
-        }
-    }
-    /*$(".CodeMirror-lines").resize(function(e) {
-     var _height = $(".CodeMirror").height();
-     var realHeight = parseInt($(".CodeMirror-scroll>div").css("min-height").substring(0, $(".CodeMirror-scroll>div").css("min-height").length - 2), 10);
-     (realHeight > _height) ? $("#editor-comment-area").height(realHeight) : $("#editor-comment-area").height(_height);
-     });*/
-
-    function getFilePath(paths) {
-        var currentdocumentpath = '';
-        $.each(paths, function(i, doc) {
-            currentdocumentpath += doc + '*';
-        });
-        return currentdocumentpath.substring(0, currentdocumentpath.length - 1);
+            return;        
+        myCodeMirror.setOption("readOnly", true);        
     }
 
-    function _augmentDocument(path, sid) {
-        var url = "/project/" + path + "/augment";
+    now.executeResumeCommand = function(sid) {
+        if (sid === now.core.clientId)
+            return;        
+        myCodeMirror.setOption("readOnly", false);        
+    }
+    
+
+    function _augmentDocument(pname) {
+        var url = "/project/" + pname + "/augment";
 
         $.get(url, function(data) {
             $.each(data.comments, function(index, comment) {
@@ -962,439 +1001,147 @@ $(document).ready(function() {
                 lc.from = lockedCode.lockedCodeFrom;
                 lc.to = lockedCode.lockedCodeTo;
                 lc.who = lockedCode.lockedCodeOwner;
-                lc.path = lockedCode.lockedCodePath;
-                lc.timestamp = lockedCode.lockedCodetimestamp;
+                lc.timestamp = lockedCode.lockedCodeTimestamp;
                 lc.tsstring = lockedCode.lockedCodeTSString;
                 lc.content = lockedCode.lockedCodeContent;
 
                 lockCode(lc, lc.lcid, myCodeMirror);
             });
+            
+            $.each(data.notificationRequests, function(index, notificationRequest) {
+                var nr = {};
+                nr.ntid = notificationRequest.notificationRequestId;
+                nr.from = notificationRequest.notificationRequestFrom;
+                nr.to = notificationRequest.notificationRequestTo;
+                nr.who = notificationRequest.notificationRequestOwner;
+                nr.timestamp = notificationRequest.notificationRequestTimestamp;
+                nr.tsstring = notificationRequest.notificationRequestTSString;                
 
-            now.stopTransaction(path);
+                requestNotification(nr, nr.ntid, myCodeMirror);
+            });
+
+            now.stopTransaction();
 
             var waitingAutosave;
             var waitingLint;
             myCodeMirror.on("change", function(myCodeMirror, changeObj) {
                 clearTimeout(waitingAutosave);
-                waitingAutosave = setTimeout(saveCodeXML(myCodeMirror, false), 5000);                
+                waitingAutosave = setTimeout(saveCodeXML(myCodeMirror, false), 5000);
 
                 updateCommentsLineNumber();
-                updateLockedCodeLineNumber();                
-            });
-
-            if (currentDocumentPath.indexOf(".js") !== -1) {
-                myCodeMirror.on("change", function(myCodeMirror, changeObj) {
-                    clearTimeout(waitingLint);
-                    waitingLint = setTimeout(updateHints(myCodeMirror), 5000);
-                });
-            }
+                updateLockedCodeLineNumber();
+            });                                    
         });
     }
 
+    function projectEditorCreator(sid) {
+        //TODO:REVISIT
+        var mixedMode = {
+        name: "htmlmixed",
+            scriptTypes: [
+                {matches: /\/x-handlebars-template|\/x-mustache/i,
+                       mode: null},
+                {matches: /(text|application)\/(x-)?vb(a|script)/i,
+                       mode: "vbscript"}]
+        };
 
-    $('#browser').bind('click', function() {
-        //$("#syncing-status").empty();
-        //TODO save current document in database
-        var reg = /^file.*/;
+        var pname = sessionStorage["project"];
+        var elem = document.getElementById('home');
+        //Clean memory
+        errBookmarks = [];
+        commentBookmarks = [];
+        lockedCodeBookmarks = [];
+        errorIcons = [];
+        widgets = [];
+        markedText = [];
+        sideComments = [];
+        lockedCodes = [];
+        requestNotificationCodes = [];
+        //Clean memory
+        var myCodeMirror = editor(elem, mixedMode);
+        myCodeMirror.setOption("readOnly", "nocursor");           
 
-        if (reg.test($.jstree._focused().get_selected().attr('rel'))) {
-            var file_type = $.jstree._focused().get_selected().attr('rel');
-            var mode = "text/html";
-            if (file_type === "file-js")
-                mode = "javascript";
-            else if (file_type === "file-css")
-                mode = "css"
-            $('.breadcrumb').empty();
-            var paths = $.jstree._focused().get_path();
-            var li;
+        //Save current content to the database before openning new file
+        var docName = sid;
+        sessionStorage.setItem("docName", docName);
 
-            for (var i = 0; i < paths.length - 1; i++) {
-                li = $('<li>').append($('<a>').attr('href', '#').html(paths[i]).click(function() {
-                    $.jstree._reference('#browser').select_node($('#' + $(this).text() + '_id'), true);
-                })).append('<span class="divider">/</span>');
-                $('.breadcrumb').append(li);
+        var connection = sharejs.open(docName, 'text', function(error, newdoc) {
+            if (doc !== null) {
+                doc.close();
+                doc.detach_codemirror();
             }
-            li = $('<li>').addClass('active').html(paths[i]);
-            $('.breadcrumb').append(li);
 
-            var elem = document.getElementById('home');
-            //Clean memory
-            errBookmarks = [];
-            commentBookmarks = [];
-            lockedCodeBookmarks = [];
-            errorIcons = [];
-            widgets = [];
-            markedText = [];
-            sideComments = [];
-            lockedCodes = [];
-            //Clean memory
-            var myCodeMirror = editor(elem, mode);
-            myCodeMirror.setOption("readOnly", "nocursor");
+            doc = newdoc;
 
-            //Save current content to the database before openning new file
-            var docName = $.jstree._focused().get_selected().attr('data-shareJSId');
-            sessionStorage.setItem("docName", docName);
-            if (currentDocumentPath)
-                saveCodeXML(myCodeMirror, false);
-            currentDocumentPath = getFilePath(paths);
-
-            var connection = sharejs.open(docName, 'text', function(error, newdoc) {
-                if (doc !== null) {
-                    doc.close();
-                    doc.detach_codemirror();
-                }
-
-                doc = newdoc;
-
-                if (error) {
-                    console.error(error);
-                    return;
-                } else {
-                    doc.attach_codemirror(myCodeMirror);
-                    myCodeMirror.setOption("readOnly", false);                    
-                }
-
-                //Start a transaction by making other open editors readonly
-                now.startTransaction(currentDocumentPath);
-
-                _augmentDocument(currentDocumentPath, docName);
-                //End transaction
-            });
-
-            if ($(".CodeMirror.CodeMirror-wrap").size() > 1) {
-                $($(".CodeMirror.CodeMirror-wrap")[1]).remove();
-            }
-            $(".CodeMirror-wrap").height($("#project").height());
-
-            $(".CodeMirror-lines").mousedown(function(e) {
-                if (e.which === 3) {
-                    cmPosition.left = e.clientX;
-                    cmPosition.top = e.clientY;
-                }
-            });
-
-            $(".CodeMirror-lines").contextMenu(editor_contextmenu, {
-                theme : 'vista'
-            });
-
-            $("#right-items").css("display", "block");
-            $("#right-items>div").html("");
-
-            //TODO:Share cursor positions
-            /*myCodeMirror.on("cursorActivity", function() {
-             var color = sessionStorage.getItem("color");
-             var cursor = myCodeMirror.getCursor();
-             cursor.color = color;
-             cursor.sid = now.core.clientId;
-             cursor.who = now.user.user;
-             cursor.path = currentDocumentPath;
-             now.syncCursors(cursor, now.user.clientId);
-             });*/            
-
-            var user = username;
-            user.currentDocument = currentDocumentPath.replace(/\*/g, '/');
-            now.updateCurrentDoc(username, user.currentDocument);
-
-            window.myCodeMirror = myCodeMirror;
-            if (file_type === 'file-html') {
-                _switchLiveViewButton(true);
+            if (error) {
+                console.error(error);
+                return;
             } else {
-                _switchLiveViewButton(false);
+                doc.attach_codemirror(myCodeMirror);
+                myCodeMirror.setOption("readOnly", false);
+                
             }
-            _toggleLiveView(false);
-        }
-    });
 
-    function _createJsTree(tree_data) {
-        $("#browser").jstree({
-            "unique" : {
-                "error_callback" : function(n, p, f) {
-                    alert("Duplicate node \"" + n + "\"!");
-                }
-            },
-            select_node : true,
-            json_data : {
-                data : tree_data,
-                progressive_render : true
-            },
-            types : {
-                valid_children : ["root"],
-                types : {
-                    root : {
-                        icon : {
-                            image : "assets/img/project.png"
-                        },
-                        valid_children : ["file-html", "file-js", "file-css", "folder-html", "folder-css", "folder-js", "folder"],
-                    },
-                    "file-html" : {
-                        valid_children : "none",
-                        icon : {
-                            image : "assets/img/file-html.png"
-                        }
-                    },
-                    "file-js" : {
-                        valid_children : "none",
-                        icon : {
-                            image : "assets/img/file-js.png"
-                        }
-                    },
-                    "file-css" : {
-                        valid_children : "none",
-                        icon : {
-                            image : "assets/img/file-css.png"
-                        }
-                    },
-                    folder : {
-                        valid_children : ["file-html", "file-js", "file-css", "folder-html", "folder-css", "folder-js", "folder"],
-                        icon : {
-                            image : "assets/img/folder.png"
-                        }
-                    },
-                    "folder-html" : {
-                        valid_children : ["file-html", "file-js", "file-css", "folder"],
-                        icon : {
-                            image : "assets/img/folder-html.png"
-                        }
-                    },
-                    "folder-css" : {
-                        valid_children : ["file-html", "file-js", "file-css", "folder"],
-                        icon : {
-                            image : "assets/img/folder-css.png"
-                        }
-                    },
-                    "folder-js" : {
-                        valid_children : ["file-html", "file-js", "file-css", "folder"],
-                        icon : {
-                            image : "assets/img/folder-js.png"
-                        }
-                    }
-                }
-            },
-            plugins : ["themes", "json_data", "contextmenu", "types", "crrm", "ui", "unique", 'search'],
-            contextmenu : {
-                select_node : true,
-                items : function(node) {
-                    var re = /^file.*/;
-                    return {
-                        create : {
-                            separator_before : false,
-                            separator_after : true,
-                            label : "New",
-                            action : false,
-                            "_disabled" : (re.test($(node).attr('rel'))),
-                            submenu : {
-                                file : {
-                                    separator_before : false,
-                                    separator_after : false,
-                                    label : "File",
-                                    action : function(obj) {
-                                        createFile(obj);
-                                        //this.create(obj);
-                                    }
-                                },
-                                folder : {
-                                    separator_before : false,
-                                    icon : false,
-                                    separator_after : false,
-                                    label : "Folder",
-                                    action : function(obj) {
-                                        createFolder(obj);
-                                        //this.create(obj);
-                                    }
-                                }
-                            }
-                        },
-                        rename : {
-                            separator_before : false,
-                            separator_after : false,
-                            label : "Rename",
-                            action : function(obj) {
-                                this.rename(obj, function(obj) {
-                                    var project_name = sessionStorage.getItem('project');
-                                    $.post('/project/' + project_name + '/rename', {
-                                        old_name : obj.old_name,
-                                        new_name : obj.new_name
-                                    }, function(data) {
-                                        localNotify('Successfully renamed ' + data.oldName + ' to ' + data.newName + '!', 'success');
-                                    }, 'json');
-                                });
-                            }
-                        },
-                        remove : {
-                            separator_before : false,
-                            icon : false,
-                            separator_after : false,
-                            label : "Delete",
-                            action : function(obj) {
-                                deleteElement(obj);
-                                if (this.is_selected(obj)) {
-                                    this.remove();
-                                } else {
-                                    this.remove(obj);
-                                }
-                            }
-                        }
-                    };
-                }
-            }
+            //Start a transaction by making other open editors readonly
+            now.startTransaction();
+
+            _augmentDocument(pname);
+            //End transaction
         });
 
-        // $("#browser").on('a', 'contextmenu', function() {
-        //    $("#browser").jstree('select_node', this);
-        // });
-    }
-
-    function createNewJsTree(project_name) {
-        var tree_data = {
-            attr : {
-                rel : 'root'
-            },
-            data : project_name,
-            children : [{
-                data : "html",
-                attr : {
-                    rel : "folder-html"
-                }
-            }, {
-                data : "css",
-                attr : {
-                    rel : "folder-css"
-                }
-            }, {
-                data : "js",
-                attr : {
-                    rel : "folder-js"
-                }
-            }, {
-                data : "index.html",
-                attr : {
-                    rel : "file-html"
-                }
-            }],
-            state : "open"
-        };
-        _createJsTree(tree_data);
-    }
-
-    function createJsTreeByJSON(_data) {
-        var rel, ele, reg;
-        var tree_data = {
-            attr : {
-                rel : 'root',
-                id : _data.name + '_id'
-            },
-            data : _data.name,
-            children : [],
-            state : "open"
-        };
-
-        for (var key in _data.root) {
-            if (key !== 'files') {
-                if (key == 'html' || key == 'css' || key == 'js')
-                    rel = 'folder-' + key;
-                else
-                    rel = 'folder';
-                var folder = {
-                    data : key,
-                    attr : {
-                        rel : rel,
-                        id : key + '_id'
-                    },
-                    children : [],
-                    state : "open"
-                };
-                for (var i = 0; i < _data.root[key].length; i++) {
-                    ele = _data.root[key][i];
-                    if (ele !== null) {
-                        if (ele.type === 'file') {
-                            folder.children.push(_generateFileChildren(ele));
-                        } else {
-                            folder.children.push({
-                                data : ele.name,
-                                attr : {
-                                    rel : 'folder',
-                                    id : ele.name + '_id'
-                                },
-                                children : _generateChildren(ele.children),
-                                state : "open"
-                            });
-                        }
-                    }
-                }
-                tree_data.children.push(folder);
-            } else {
-                for (var i = 0; i < _data.root[key].length; i++) {
-                    ele = _data.root[key][i];
-                    tree_data.children.push(_generateFileChildren(ele));
-                }
-            }
-
+        if ($(".CodeMirror.CodeMirror-wrap").size() > 1) {
+            $($(".CodeMirror.CodeMirror-wrap")[1]).remove();
         }
-        _createJsTree(tree_data);
+        //$(".CodeMirror-wrap").height($("#project").height());
+
+        $(".CodeMirror-lines").mousedown(function(e) {
+            if (e.which === 3) {
+                cmPosition.left = e.clientX;
+                cmPosition.top = e.clientY;
+            }
+        });
+        
+        // $(".CodeMirror-lines").hover(function(e) {
+            // var cursor = myCodeMirror.coordsChar({left:e.clientX,top:e.clientY});
+            // var wrapClass = myCodeMirror.getLineHandle(cursor.line).wrapClass;                                        
+//             
+            // $(".context-menu-shadow").remove();
+            // $(".context-menu.context-menu-theme-vista").parents().eq(3).remove();
+            // if(wrapClass !== undefined && wrapClass.indexOf("commentMarker") !== -1) {
+                // $(".CodeMirror-lines").contextMenu(editor_contextmenuPrime, {
+                    // theme : 'vista'
+                // });                                   
+            // }
+            // else {
+                // $(".CodeMirror-lines").contextMenu(editor_contextmenu, {
+                    // theme : 'vista'
+                // });
+            // }
+        // }); 
+        
+        $(".CodeMirror-lines").contextMenu(editor_contextmenu, {
+            theme : 'vista'
+        });
+        
+               
+
+        $("#right-items").css("display", "block");
+        $("#right-items>div").html("");
+
+        //TODO:Share cursor positions
+        /*myCodeMirror.on("cursorActivity", function() {
+         var color = sessionStorage.getItem("color");
+         var cursor = myCodeMirror.getCursor();
+         cursor.color = color;
+         cursor.sid = now.core.clientId;
+         cursor.who = now.user.user;
+         cursor.path = currentDocumentPath;
+         now.syncCursors(cursor, now.user.clientId);
+         });*/
+
+        var user = username;
+        window.myCodeMirror = myCodeMirror;
     }
-
-    function _generateFileChildren(ele) {
-        var reg, rel;
-        reg = /.+\.html/;
-        if (reg.test(ele.name)) {
-            rel = 'file-html';
-        } else {
-            reg = /.+\.css/;
-            if (reg.test(ele.name)) {
-                rel = 'file-css';
-            } else {
-                rel = 'file-js';
-            }
-        }
-        return {
-            data : ele.name,
-            attr : {
-                rel : rel,
-                id : ele.name + '_id',
-                'data-shareJSId' : ele.shareJSId
-            }
-        };
-    };
-
-    function _generateChildren(folder) {
-        var ele;
-        var children = [];
-        for (var i = 0; i < folder.length; i++) {
-            ele = folder[i];
-            if (ele.type === 'file') {
-                reg = /.+\.html/;
-                if (reg.test(ele.name)) {
-                    rel = 'file-html';
-                } else {
-                    reg = /.+\.css/;
-                    if (reg.test(ele.name)) {
-                        rel = 'file-css';
-                    } else {
-                        rel = 'file-js';
-                    }
-                }
-                children.push({
-                    data : ele.name,
-                    attr : {
-                        rel : rel,
-                        id : ele.name + '_id',
-                        'data-shareJSId' : ele.shareJSId
-                    }
-                });
-            } else {
-                children.push({
-                    data : ele.name,
-                    attr : {
-                        rel : 'folder',
-                        id : ele.name + '_id'
-                    },
-                    children : _generateChildren(ele.children),
-                    state : "open"
-                });
-            }
-        }
-        return children;
-    };
 
     function checkQuality() {
         var options = {
@@ -1422,44 +1169,9 @@ $(document).ready(function() {
         if (JSHINT(myCodeMirror.getValue(), options))
             reportSuccess(JSHINT.data());
         else
-            reportFailure(JSHINT.data(), myCodeMirror);
-        showConsole($("#small-console a"));
+            reportFailure(JSHINT.data(), myCodeMirror);        
     }
-
-    function showConsole(consoleToggle) {
-        $("#small-console").css({
-            bottom : 180,
-            height : 200
-        });
-        $(consoleToggle).attr("href", "#hide");
-        $("a[data-action=editor-console-toggle]").data("tooltip").options.title = "Hide Console";
-        $("a[data-action=editor-console-toggle] i").attr("class", "icon-chevron-down icon-white pull-right");
-        var _div = $("#small-console div").css({
-            display : "block",
-            position : "relative",
-            "overflow-y" : "scroll",
-            "-webkit-transition" : "all .5s ease",
-            background : "-webkit-linear-gradient(top, rgba(242,242,242,1) 0%,rgba(193,193,189,1) 100%)",
-            "padding-left" : "25px",
-            "padding-top" : "5px",
-            "margin-left" : "25px",
-            "margin-right" : "-20px",
-            height : 180,
-            top : 20,
-            opacity : .85
-        });
-        $("#small-console").toggleClass("small-console-animated");
-    }
-
-    function hideConsole(consoleToggle) {
-        $("a[data-action=editor-console-toggle]").data("tooltip").options.title = "Show Console";
-        $("#small-console").css({
-            bottom : 0
-        });
-        $(consoleToggle).attr("href", "#show");
-        $("a[data-action=editor-console-toggle] i").attr("class", "icon-chevron-up icon-white pull-right");
-    }
-
+   
     function getSelectedRange() {
         return {
             from : myCodeMirror.getCursor(true),
@@ -1494,285 +1206,10 @@ $(document).ready(function() {
                 if (/<!--[\s\S]*?-->/g.test(myCodeMirror.getSelection()) || /\/\*([\s\S]*?)\*\//g.test(myCodeMirror.getSelection())) {
                     range = getSelectedRange();
                     myCodeMirror.commentRange(false, range.from, range.to);
-                } else {
-                    var uncomment_error = $("#small-console div");
-                    uncomment_error[0].innerHTML = "";
-                    uncomment_error.append(arian(editorMessage.errorMessage, {
-                        message : "Selected text is not a comment to be uncommented. Please select a commented text block to uncomment."
-                    }));
-                    $("#small-console").toggleClass("small-console-animated");
-                    showConsole($("a[data-action=editor-console-toggle]"));
                 }
             }
-        } else {
-            var comment_error = $("#small-console div");
-            comment_error[0].innerHTML = "";
-            if (isComment)
-                comment_error.append(arian(editorMessage.errorMessage, {
-                    message : "Please select uncommented text you want to comment."
-                }));
-            else
-                comment_error.append(arian(editorMessage.errorMessage, {
-                    message : "Please select commented text you want to uncomment."
-                }));
-            $("#small-console").toggleClass("small-console-animated");
-            showConsole($("a[data-action=editor-console-toggle]"));
         }
-    }
-
-    function localNotify(message, type) {
-        var options = {
-            text : message,
-            template : '<div class="noty_message"><span class="noty_text"></span><div class="noty_close"></div></div>',
-            type : type,
-            dismissQueue : true,
-            layout : 'top',
-            timeout : 3000,
-            closeWith : ['button'],
-            buttons : false
-        };
-        var ntfcn = noty(options);
-    }
-
-    function saveCodeXML(editor, ntfn) {
-        //$("#syncing-status").html("Saving...");
-        var sid = sessionStorage.getItem("docName");
-        var project_name = sessionStorage.getItem('project');
-        if (currentDocumentPath === '')
-            return;
-        var xmlDoc = codeToXML(editor);
-        var url = '/project/' + project_name + '/saveXML';
-        var date = new Date();
-
-        $.post(url, {
-            "owner" : now.user.user,
-            "snapshot" : xmlDoc,
-            "content" : editor.getValue(),
-            "path" : currentDocumentPath,
-            "shareJSId" : sid,
-            "timestamp" : date,
-        }, function(data) {
-            if (ntfn)
-                localNotify('Successfully saved ' + currentDocumentPath.replace(/\*/g, '/') + ' in the the database!', 'success');
-            //$("#syncing-status").html("Last saved on " + date.toLocaleString());
-        }, 'json');
-    }
-
-    function deleteElement(ele) {
-        var project_name = sessionStorage.getItem('project');
-        var id = $.jstree._focused().get_selected().attr('data-sharejsid');
-        var paths = $.jstree._focused().get_path();
-        $.post('/project/' + project_name + '/' + id + '/delete', {
-            paths : paths,
-            type : 'file'
-        }, function(data) {
-        }, 'json');
-        localNotify('Successfully deleted ' + path + '!', 'success');
-        //refreshProjectTree();
-    }
-
-    function createFile(ele) {
-        var dialogHeader = "<button type='button' class='close' data-dismiss='modal'>×</button><p>New File</p>";
-        var selectContent = $("<p>").append($("<select>").append('<option><a href="#"></a></option>').append('<option value=".html"><a href="#">HTML</a></option>').append('<option value=".js"><a href="#">JavaScript</a></option>').append('<option value=".css"><a href="#">CSS</a></option>').change(function() {
-            $("div input").val($("select option:selected").val());
-            $("div input").focus();
-            $("div input")[0].setSelectionRange(0, 0);
-        })).append($("<p>").append($("<input>").attr({
-            type : "text",
-            placeholder : "Enter file name",
-            width : "100%",
-            required : true
-        })));
-        var dialogContent = $("<div>").css({
-            "margin" : "0 auto"
-        }).append(selectContent);
-
-        var dialogFooter = $("<div>").append($("<a>").attr({
-            class : "btn",
-            "data-dismiss" : "modal"
-        }).text("Cancel")).append($("<a>").attr({
-            class : "btn btn-primary"
-        }).css('margin', '5px 5px 6px').text("Create").click(function() {
-            // Create New a file
-            var reg = /.+\..+/;
-            var project_name = sessionStorage.getItem('project');
-            var paths = $.jstree._focused().get_path();
-            var file_name = $("div input").val();
-            var sharejsid = uuid.v4();
-
-            if (!reg.test($("div input").val())) {
-                return;
-            }
-            // save file
-            $.post('/project/' + project_name + '/new', {
-                paths : paths,
-                name : file_name,
-                sid : sharejsid,
-                type : 'file'
-            }, function() {
-            }, 'json');
-
-            var opt = $("select option:selected").val();
-            var type;
-            if (opt === ".html") {
-                type = "file-html";
-            } else if (opt === ".js") {
-                type = "file-js";
-            } else {
-                type = "file-css";
-            }
-            // create
-            $("#browser").jstree("create", ele, "last", {
-                data : $("#dialog>div.modal-body input").val(),
-                attr : {
-                    rel : type,
-                    id : file_name + "_id",
-                    'data-shareJSId' : sharejsid
-                }
-            }, function(o) {
-            }, true);
-            $("#dialog").modal('hide');
-
-            //Notification
-            var notifMsg = '<span style="text-align:justify"><a href="#" class="notification-user-a">' + now.user.name + '</a>' + ' has created a new file <a href="#" class="notification-file-a">' + file_name + '</a> under <a class="notification-project-a" href="#">' + sessionStorage.getItem('project') + '</a> project.</span>';
-            ns.sendNotification(notifMsg, "information", true, 'g');
-            localNotify("Successfully created " + file_name + " file!", 'success');
-            //saveCodeXML(myCodeMirror, false);
-            //refreshProjectTree();
-        }));
-
-        $("#dialog>div.modal-header").html(dialogHeader);
-        $("#dialog>div.modal-body").html(dialogContent);
-        $("#dialog>div.modal-footer").html(dialogFooter);
-
-        $("#dialog").modal();
-    }
-
-    function refreshProjectTree() {
-        // FIXME: find the other to refresh the tree.
-        $.get('/project', {
-            name : sessionStorage.getItem('project')
-        }, function(data) {
-            createJsTreeByJSON(data);
-        });
-    }
-
-    function createFolder(ele) {
-        var dialogHeader = "<button type='button' class='close' data-dismiss='modal'>×</button><p>New Folder</p>";
-        var dialogContent = $("<div>").css({
-            "margin" : "0 auto"
-        }).append($("<p>").append($("<input>").attr({
-            type : "text",
-            placeholder : "Enter folder name",
-            width : "100%",
-            required : true
-        })));
-        var dialogFooter = $("<div>").append($("<a>").attr({
-            class : "btn",
-            "data-dismiss" : "modal"
-        }).text("Cancel")).append($("<a>").attr({
-            class : "btn btn-primary"
-        }).css('margin', '5px 5px 6px').text("Create").click(function() {
-            //  TODO save folder
-            var project_name = sessionStorage.getItem('project');
-            var paths = $.jstree._focused().get_path();
-            var folder_name = $("div input").val();
-            $.post('/project/' + project_name + '/new', {
-                paths : paths,
-                name : folder_name,
-                type : 'folder'
-            }, function() {
-            }, 'json');
-
-            // create
-            $("#browser").jstree("create", ele, "last", {
-                data : $("#dialog>div.modal-body input").val(),
-                attr : {
-                    rel : 'folder'
-                }
-            }, function(o) {
-            }, true);
-            $("#dialog").modal('hide');
-            var notifMsg = '<span style="text-align:justify"><a href="#" class="notification-user-a">' + now.user.name + '</a>' + ' has created a new folder <a href="#" class="notification-file-a">' + folder_name + '</a> under <a class="notification-project-a" href="#">' + sessionStorage.getItem('project') + '</a> project.</span>';
-            localNotify("Successfully created " + folder_name + " folder!", 'success');
-            ns.sendNotification(notifMsg, "information", true, 'g');
-        }));
-        $("#dialog>div.modal-header").html(dialogHeader);
-        $("#dialog>div.modal-body").html(dialogContent);
-        $("#dialog>div.modal-footer").html(dialogFooter);
-        $("#dialog").modal();
-    }
-
-
-    $("#left-items").width(205);
-    $("#project-tree").jstree();
-    $("#nav-tab a:first").tab("show");
-    $("#nav-tab a").click(function(e) {
-        e.preventDefault();
-        $(this).tab("show");
-        var _class = $("#nav-tab li.active a i").attr("class");
-        $("#nav-tab li.active a i").attr("class", _class + " icon-white");
-        $("#nav-tab li:not(.active) a i").each(function(e) {
-            _tmp = $(this).attr("class");
-            $(this).attr("class", _tmp.split(" ")[0]);
-        });
-    });
-    $("#nav-tab a:first").click();
-    $(".dropdown-toggle").dropdown();
-    function hideLeftArea(toggleButton) {
-        $("#left-items").animate({
-            width : "0px",
-            "min-width" : "0px"
-        }, {
-            duration : 200,
-            step : function() {
-                $("#left-splitter").animate({
-                    left : $("#left-items").width()
-                });
-                _original_left = $("#editor-area").position().left;
-                _new_left = $(".left-splitter").position().left + $(".left-splitter").usedWidth();
-                $("#editor-area").css("left", $(".left-splitter").position().left + $(".left-splitter").width());
-                $("#editor-area").width($("#editor-area").width() + (_original_left - _new_left));
-                $(".CodeMirror").width($("#editor-area").width());
-            }
-        });
-        toggleButton.attr("data-action", "#show").css("left", "0px");
-        $(".left-splitter-collapse-button").data("tooltip").options.title = "Show";
-        $(".left-splitter-collapse-button").data("tooltip").options.placement = "right";
-    }
-
-    function showLeftArea(toggleButton) {
-        $("#left-items").animate({
-            width : "205px",
-            "margin-left" : "5px"
-        }, {
-            duration : 200,
-            step : function() {
-                $("#left-splitter").animate({
-                    left : $("#left-items").width()
-                });
-                _original_left = $("#editor-area").position().left;
-                _new_left = $(".left-splitter").position().left + $(".left-splitter").width();
-                $("#editor-area").css("left", $(".left-splitter").position().left + $(".left-splitter").width());
-                $("#editor-area").width($("#editor-area").width() + (_original_left - _new_left));
-                $(".CodeMirror").width($("#editor-area").width());
-            }
-        });
-        toggleButton.attr("data-action", "#hide").css("left", "-1px");
-        $(".left-splitter-collapse-button").data("tooltip").options.title = "Hide";
-        $(".left-splitter-collapse-button").data("tooltip").options.placement = "top";
-    }
-
-
-    $(".left-splitter-collapse-button").click(function() {
-        if ($("button[data-action=editor-livepreview-toggle]").attr("data-status") === "on")
-            return;
-        if ($(this).attr("data-action") === "#hide") {
-            hideLeftArea($(this));
-        } else {
-            showLeftArea($(this));
-        }
-    });
+    }       
 
     function startIdleTimer(idleTime) {
         var dialogHeader = "<button type='button' class='close' data-dismiss='modal'>×</button><p style='text-align:center;font-weight:bold;' class='text-error'>***Warning***</p><p></p>";
@@ -1822,13 +1259,8 @@ $(document).ready(function() {
     // var elem = document.getElementById("home");
     CodeMirror.commands.autocomplete = function(cm) {
         var mode = cm.getOption("mode");
-        if (mode === "htmlmixed") {
-            CodeMirror.simpleHint(cm, CodeMirror.javascriptHint);
-            CodeMirror.simpleHint(cm, CodeMirror.htmlHint);
-        } else if (mode === "text/html" || mode === "xml") {
-            CodeMirror.simpleHint(cm, CodeMirror.htmlHint);
-        } else if (mode === "javascript") {
-            CodeMirror.simpleHint(cm, CodeMirror.javascriptHint);
+        if (mode.name === "htmlmixed") {            
+            CodeMirror.showHint(cm, CodeMirror.htmlHint);               
         }
     };
 
@@ -1836,8 +1268,7 @@ $(document).ready(function() {
     // TODO: remove after finished
     $.get('/project', {
         name : sessionStorage.getItem('project')
-    }, function(data) {
-        createJsTreeByJSON(data);
+    }, function(data) {        
         $("#dialog").modal('hide');
     });
 
@@ -1856,12 +1287,10 @@ $(document).ready(function() {
     });
 
     $("a[data-action=editor-open-project]").click(function() {
-        // fetch project list
         _openProject();
     });
 
     $("a[data-action=editor-close-project]").click(function() {
-        // fetch project list
         _closeProject();
     });
 
@@ -1895,6 +1324,7 @@ $(document).ready(function() {
     var users;
 
     function _openProject() {
+        //TODO:REVISIT
         if ($(".CodeMirror.CodeMirror-wrap").size() > 1) {
             $($(".CodeMirror.CodeMirror-wrap")[1]).remove();
         }
@@ -1919,11 +1349,12 @@ $(document).ready(function() {
                     $.get('/project', {
                         name : sessionStorage.getItem('project')
                     }, function(data) {
-                        createJsTreeByJSON(data);
+                        //createJsTreeByJSON(data);
                         $("#dialog").modal('hide');
 
                         //TODO "Now" Group Change, Remove User From Old Group
                         now.changeProjectGroup(sessionStorage.getItem('project'), (TB.checkSystemRequirements() === TB.HAS_REQUIREMENTS));
+                        projectEditorCreator(data.shareJSId);
                         //now.sayHi();
                     });
                 }))).append($('<td>').html(created_on_string)).append($('<td>').html(last_modified_on_string));
@@ -1941,6 +1372,7 @@ $(document).ready(function() {
 
 
     now.updateList = function(users) {
+        //TODO:REVISIT
         function getDocPathName(docPath) {
             if (docPath === 'undefined')
                 return {
@@ -1955,30 +1387,29 @@ $(document).ready(function() {
             };
         }
 
-
-        $("#chat-users-list").html("");
-        var pname = sessionStorage.getItem('project');
-        $.each(users[pname], function(index, user) {
-            var docPath = getDocPathName(user.currentDocument);
-            var chatAvailabilityClass = user.videoChat ? "cu-status-available-video" : "cu-status-available";
-            var cuItem = $("<div>").attr("chat-user-id", user._id).addClass("cu-item").append($("<table>").css({
-                'width' : '100%',
-                'height' : '100%',
-                'text-align' : 'center'
-            }).append($("<tr>").attr('align', 'center').append($("<td>").css('width', '40px').append($("<div>").addClass(chatAvailabilityClass))).append($("<td>").css("width", "20px").append("<img src=assets/img/silhouette.png></img>")).append($("<td>").css({
-                'text-align' : 'left',
-                'padding-left' : '5px'
-            }).attr('valign', 'middle').append($("<a>").css({
-                "font-weight" : "bold",
-                "font-size" : "12px"
-            }).text(user.user + " ").addClass("text-info")))).append($("<tr>").tooltip({
-                title : docPath.path,
-                placement : "bottom"
-            }).attr('align', 'left').append($("<td colspan='3'>").append($("<span>").css({
-                "font-size" : "10px"
-            }).addClass("text-warning").text("Editing " + docPath.doc)))));
-            $("#chat-users-list").append($("<li>").html(cuItem));
-        });
+        // $("#chat-users-list").html("");
+        // var pname = sessionStorage.getItem('project');
+        // $.each(users[pname], function(index, user) {
+        // var docPath = getDocPathName(user.currentDocument);
+        // var chatAvailabilityClass = user.videoChat ? "cu-status-available-video" : "cu-status-available";
+        // var cuItem = $("<div>").attr("chat-user-id", user._id).addClass("cu-item").append($("<table>").css({
+        // 'width' : '100%',
+        // 'height' : '100%',
+        // 'text-align' : 'center'
+        // }).append($("<tr>").attr('align', 'center').append($("<td>").css('width', '40px').append($("<div>").addClass(chatAvailabilityClass))).append($("<td>").css("width", "20px").append("<img src=assets/img/silhouette.png></img>")).append($("<td>").css({
+        // 'text-align' : 'left',
+        // 'padding-left' : '5px'
+        // }).attr('valign', 'middle').append($("<a>").css({
+        // "font-weight" : "bold",
+        // "font-size" : "12px"
+        // }).text(user.user + " ").addClass("text-info")))).append($("<tr>").tooltip({
+        // title : docPath.path,
+        // placement : "bottom"
+        // }).attr('align', 'left').append($("<td colspan='3'>").append($("<span>").css({
+        // "font-size" : "10px"
+        // }).addClass("text-warning").text("Editing " + docPath.doc)))));
+        // $("#chat-users-list").append($("<li>").html(cuItem));
+        // });
     }
     function _closeProject() {
         now.changeProjectGroup(undefined);
@@ -1989,11 +1420,11 @@ $(document).ready(function() {
         $("#chat.tab-pane>table>tbody>tr>td>ul").html('');
         $("#right-items").css("display", "none");
         $("#right-items>div").html("");
-        sessionStorage.clear();
-        currentDocumentPath = '';
+        sessionStorage.clear();        
     }
 
     function _newProject() {
+        //TODO:REVISIT
         if ($(".CodeMirror.CodeMirror-wrap").size() > 1) {
             $($(".CodeMirror.CodeMirror-wrap")[1]).remove();
         }
@@ -2020,13 +1451,16 @@ $(document).ready(function() {
                 // post to server
                 var users = $("#as-values-users_list").attr("value").split(",");
                 users.pop();
+                var sid = uuid.v4();
                 $.post("/project/new", {
                     pname : project_name,
+                    sid: sid,
                     users : users
                 }, function() {
-                    localNotify("Successfully created " + $("#project_name").val() + " project!", 'success');
+                    localNotify("Successfully created " + $("#project_name").val() + " project!", 'success');                    
+                    projectEditorCreator(sid);
                 });
-                createNewJsTree($("#dialog input").val());
+
                 $("#dialog").modal('hide');
 
                 //Notification
@@ -2100,125 +1534,8 @@ $(document).ready(function() {
         //TODO: add all shortcuts/hotkeys
     }
 
-    function _switchLiveViewButton(enable) {
-        if (enable) {
-            $("button[data-action=editor-livepreview-toggle]").removeAttr("disabled").removeClass("disabled");
-        } else {
-            $("button[data-action=editor-livepreview-toggle]").attr("disabled", "disabled").addClass("disabled");
-        }
-    }
-
     function _fullscreen() {
         document.documentElement.webkitRequestFullScreen(Element.ALLOW_KEYBOARD_INPUT);
-    }
-
-    function _toggleLiveView(toggleLiveView) {
-        var live_preview_toggle = $("button[data-action=editor-livepreview-toggle]");
-        var live_preview_toggle_icon = $("button[data-action=editor-livepreview-toggle] i");
-        //Show live preview
-        if (toggleLiveView) {
-            live_preview_toggle_icon.removeClass("icon-eye-close").addClass("icon-eye-open");
-            live_preview_toggle.data("tooltip").options.title = "Turn Live Preview Off!";
-            live_preview_toggle.attr("data-status", "on");
-            //Add Preview Area
-            var preview_left = $(".CodeMirror").usedWidth() + 5;
-            var preview_top = 52;
-            //$(".breadcrumb").usedHeight() + parseInt($(".breadcrumb").css("line-height"));
-            var preview_width = $(".CodeMirror").width() + 10;
-            var live_preview_iframe_content = "<!DOCTYPE html><html><head></head><body></body></html>";
-
-            var live_preview_window = $("<div>").height($(".CodeMirror").height()).attr({
-                id : "live_preview_window"
-            }).css({
-                position : "absolute",
-                top : (preview_top + "px"),
-                float : "left",
-                "background-color" : "#FFFFFF",
-                "margin-left" : "7px",
-                border : "1px solid #DDD"
-            }).html("<iframe id='live_preview_target' class='preview_iframe'>" + live_preview_iframe_content + "</iframe>");
-            $("#editor-area").append(live_preview_window);
-            //TODO:Inject Content to iFrame Here
-            // myCodeMirror.setOption("onChange", function(cm, changedText){
-            // console.log(changedText.text);
-            // while(temp){
-            // temp = temp.next;
-            // console.log(temp.text);
-            // }
-            // });
-
-            //Hide Comment Area
-            var pt = $('#live_preview_target')[0].contentWindow.document;
-            pt.open();
-            pt.close();
-            $('body', pt).append(myCodeMirror.getValue());
-
-            myCodeMirror.setOption("onChange", function(cm, change) {
-                var preview = $('#live_preview_target')[0].contentWindow.document;
-                preview.open();
-                preview.close();
-
-                var html = cm.getValue();
-                $('body', preview).append(html);
-            });
-
-            /*var isCommentVisible = ($("#right-items").is(":visible"));
-            if (isCommentVisible) {
-            $("#right-items").hide("drop", {
-            direction : "right"
-            }, 200);
-            }*/
-
-            //Expand Editor/Preview Area
-            $("#editor-area").animate({
-                width : $("#editor-area").width() //Check this damn thing here!
-            }, {
-                duration : 200,
-                step : function(now, fx) {
-                    //$(".right-splitter").css("left", ($("#left-items").is(":visible") ? $("#left-items").usedWidth() : 0) + $(".left-splitter").usedWidth() + $("#editor-area").usedWidth());
-                    $(".CodeMirror").width($("#editor-area").width() / 2 - 5);
-                    $("#live_preview_window").width($(".CodeMirror").width());
-                    $("#live_preview_window").css({
-                        left : $(".CodeMirror").width()
-                    });
-                }
-            });
-
-            /*$(".right-splitter-collapse-button").attr("data-action", "#show").css("left", "-2px");
-             $(".right-splitter-collapse-button").data("tooltip").options.title = "Show Comments";
-             $(".right-splitter-collapse-button").data("tooltip").options.placement = "left";*/
-
-        }
-        //Hide live preview
-        else {
-            $("button[data-action=editor-livepreview-toggle] i").removeClass("icon-eye-open").addClass("icon-eye-close");
-            live_preview_toggle.data("tooltip").options.title = "Turn Live Preview On!";
-            live_preview_toggle.attr("data-status", "off");
-            //Remove Preview Area
-            myCodeMirror.setOption("onChange", null);
-            $("#live_preview_window").remove();
-
-            /*var isCommentVisible = $(".right-splitter-collapse-button").attr("data-action") === "#hide";
-             if (!isCommentVisible) {
-             $("#right-items").show("drop", {
-             direction : "right"
-             }, 200);
-             }*/
-
-            $("#editor-area").animate({
-                width : $("#editor-area").width() //Check this damn thing here
-            }, {
-                duration : 200,
-                step : function(now, fx) {
-                    //$(".right-splitter").css("left", ($("#left-items").is(":visible") ? $("#left-items").usedWidth() : 0) + $(".left-splitter").usedWidth() + $("#editor-area").usedWidth());
-                    $(".CodeMirror").width($("#editor-area").width());
-                }
-            });
-
-            /*$(".right-splitter-collapse-button").attr("data-action", "#hide").css("left", "-1px");
-             $(".right-splitter-collapse-button").data("tooltip").options.title = "Hide Comments";
-             $(".right-splitter-collapse-button").data("tooltip").options.placement = "top";*/
-        }
     }
 
 
@@ -2238,25 +1555,11 @@ $(document).ready(function() {
         }
     });
 
-    $('#chat-start').click(function() {
-        var pname = sessionStorage.getItem('project');
-        chatWith('GroupChat');
-    });
-
-    function _generateCommentContent(content) {
-        /*.append($('<p>').css('margin', '2px').html($('<span>').css({
-         'font-weight' : 'bold',
-         'font-size' : '10px',
-         'font-color' : '#3399FF'
-         }).html(comment.commentSender).append($('<span>').css({
-         'font-weight' : 'normal',
-         'font-size' : '10px'
-         }).html(': ' + ))).append($('<p>').css({
-         'font-size' : '8px',
-         'text-align' : 'left',
-         'margin-bottom' : '-1px'
-         }).html(tsstring)));*/
-    }
+    //TODO: Chat Start
+    // $('#chat-start').click(function() {
+    // var pname = sessionStorage.getItem('project');
+    // chatWith('GroupChat');
+    // });
 
     function appendComment(commentId, commentBody, commentSender, commentLineNumber, commentTimestamp, remote) {
         if ($('#icon-' + commentId).size() === 0) {
@@ -2339,10 +1642,10 @@ $(document).ready(function() {
                 nowComment.who = now.user.user;
                 nowComment.timestamp = ts;
                 nowComment.TSString = 'Sent on ' + ts.toDateString() + ' at ' + ts.toLocaleTimeString();
-                nowComment.taggedUsers = taggedUsers;
-                nowComment.path = currentDocumentPath;
+                nowComment.taggedUsers = taggedUsers;                
                 nowComment.cid = $($(this).parents()[5]).attr('id');
                 nowComment.line = getLineByCID(nowComment.cid);
+                nowComment.pname = pname;
 
                 $(this).val('');
                 appendComment(nowComment.cid, nowComment.content, nowComment.who, nowComment.line, nowComment.timestamp, false);
@@ -2395,7 +1698,8 @@ $(document).ready(function() {
         commentIconObg.lineNumber = parseInt(getLineByCID(comment_id), 10) - 1
         sideComments.push(commentIconObg);
 
-        saveCodeXML(myCodeMirror, false);
+        if(!remote)
+            saveCodeXML(myCodeMirror, false);
 
         myCodeMirror.on("delete", function(cm, line) {
             cm.setGutterMarker(parseInt(getLineByCID(comment_id), 10) - 1, "CodeMirror-commentsiconsGutter", null);
@@ -2537,7 +1841,7 @@ $(document).ready(function() {
                     startPublishing();
                     //$($("#video-chat>div.modal-footer>div>a")[0]).addClass('disabled');
                 } else if ($("#streamButton").attr("data-action") === "stopPublish") {
-                    stopPublishing();                    
+                    stopPublishing();
                     //$($("#video-chat>div.modal-footer>div>a")[0]).removeClass('disabled');
                 }
             });
@@ -2608,17 +1912,6 @@ $(document).ready(function() {
     });
     $("a[data-action=editor-enter-fullscreen]").click(function() {
         _fullscreen();
-    });
-
-    $("a[data-action=editor-console-toggle]").click(function() {
-        if ($(this).attr("href") === "#show")
-            showConsole($(this));
-        else
-            hideConsole($(this));
-    });
-
-    $("a[data-action=editor-console-clean]").click(function() {
-        $("#small-console>div").html("");
     });
 
     $("a[data-action=editor-save-document]").click(function() {

@@ -8,12 +8,11 @@ html
     link(rel='stylesheet', href='assets/css/bootstrap.min.css', type='text/css', media='screen', charset='utf-8')
     link(rel='stylesheet', href='assets/css/jquery-ui-1.9.2.custom.css', type='text/css', media='screen', charset='utf-8')
     link(rel='stylesheet', href='assets/js/colorpicker/Color.Picker.Classic.css', type='text/css', media='screen', charset='utf-8')    
-    link(rel='stylesheet', href='assets/js/codemirror/codemirror.css', type='text/css', media='screen', charset='utf-8')
-    link(rel='stylesheet', href='assets/js/codemirror/util/simple-hint.css', type='text/css', media='screen', charset='utf-8')
-    link(rel='stylesheet', href='assets/js/codemirror/util/dialog.css', type='text/css', media='screen', charset='utf-8')    
+    link(rel='stylesheet', href='assets/js/codemirror/lib/codemirror.css', type='text/css', media='screen', charset='utf-8')
+    link(rel='stylesheet', href='assets/js/codemirror/addon/hint/show-hint.css', type='text/css', media='screen', charset='utf-8')
+    link(rel='stylesheet', href='assets/js/codemirror/addon/dialog/dialog.css', type='text/css', media='screen', charset='utf-8')    
     link(rel='stylesheet', href='assets/js/codemirror/theme/brackets.css', type='text/css', media='screen', charset='utf-8')
-    link(rel='stylesheet', href='assets/js/codemirror/theme/night.css', type='text/css', media='screen', charset='utf-8')
-    link(rel='stylesheet', href='assets/js/codemirror/util/lint.css', type='text/css', media='screen', charset='utf-8')    
+    link(rel='stylesheet', href='assets/js/codemirror/theme/night.css', type='text/css', media='screen', charset='utf-8')        
     link(rel='stylesheet', href='assets/css/DT_bootstrap.css', type='text/css', media='screen', charset='utf-8')
     link(rel='stylesheet', href='assets/css/autoSuggest.css', type='text/css', media='screen', charset='utf-8')
     link(rel='stylesheet', href='assets/css/site.css', type='text/css', media='screen', charset='utf-8')
@@ -51,20 +50,10 @@ html
                     | File
                     b.caret
                   ul.dropdown-menu
-                    li
-                      a(href='JavaScript:void(0);') New
-                      ul.dropdown-menu.sub-menu
-                        li
-                          a(href='JavaScript:void(0);', data-action='editor-new-file')
-                            i.icon-file
-                            | New File
-                          a(href='JavaScript:void(0);', data-action='editor-new-file')
-                            i.icon-folder-open
-                            | New Folder
-                        li
-                          a(href='JavaScript:void(0);', data-action='editor-new-project')
-                            i.icon-list-alt
-                            New Project
+                    li                    
+                      a(href='JavaScript:void(0);', data-action='editor-new-project')
+                        i.icon-list-alt
+                        | New Project
                     li
                       a(href='JavaScript:void(0);', data-action='editor-open-project')
                         i.icon-list-alt
@@ -74,9 +63,7 @@ html
                       a(href='JavaScript:void(0);', data-action='editor-close-project') Close Project                    
                     li.divider
                     li
-                      a(href='JavaScript:void(0);', data-action='editor-save-document') Save                    
-                    li
-                      a(href='JavaScript:void(0);', data-action='editor-saveall-documents') Save All
+                      a(href='JavaScript:void(0);', data-action='editor-save-document') Save                                        
                     li.divider
                     li
                       a(href='JavaScript:void(0);', data-action='editor-exit') Exit
@@ -203,38 +190,7 @@ html
                         |   Logout
 
                       
-      .row-fluid
-        #left-items.span2
-          .tabbable
-            ul#nav-tab.nav.nav-pills
-              li
-                a(href='#project')
-                  i.icon-list-alt
-              li
-                a(href='#chat')
-                  i.icon-facetime-video
-              li
-                a(href='#editor-settings')
-                  i.icon-cog
-              li
-                a(href='#editor-deploy-project')
-                  i.icon-globe
-            .tab-content
-              // project tree
-              #project.tab-pane
-                #browser
-              #chat.tab-pane(style="overflow-x:hidden")
-                table(style='width:100;height:100%;')
-                  tr(align='center')
-                    td(valign='top')
-                      ul#chat-users-list.cu-list
-                  tr(align='center', style="text-align='center'; height: 60px")
-                    td(valign='midle', style="text-align='center'")
-                      a#chat-start.btn.btn-primary Start Chat
-              #editor-settings.tab-pane
-              #editor-deploy-project.tab-pane
-        .left-splitter
-          .left-splitter-collapse-button(data-action='#hide')
+      .row-fluid        
         #editor-area.span8
           ul.breadcrumb
             li
@@ -247,31 +203,24 @@ html
               div.modal-body
               div.modal-footer
       div#chatbox.chatbox
-      audio#chatAlert(src='/assets/img/gtalk1.wav', style='display:none')        
-      #small-console(style='-webkit-box-shadow: 0px -5px 10px #000000; opacity: 0.95;z-index:5001')
-        //span#syncing-status
-        a(href='#show', data-action='editor-console-toggle')
-          i.icon-chevron-up.icon-white.pull-right
-        a(href='#', data-action='editor-console-clean')
-          i.icon-trash.icon-white.pull-right
-        div    
+      audio#chatAlert(src='/assets/img/gtalk1.wav', style='display:none')                
     script(type='text/javascript', charset='utf-8', src='assets/js/colorpicker/Color.Picker.Classic.js')
     script(type='text/javascript', charset='utf-8', src='assets/js/colorpicker/Color.Space.js')               
     script(type='text/javascript', charset='utf-8', src='assets/js/contextmenu/jquery.contextMenu.js')    
     script(type='text/javascript', charset='utf-8', src='assets/js/jquery.idletimer.js')
     script(type='text/javascript', charset='utf-8', src='assets/js/jquery.idletimeout.js')    
-    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/codemirror.js')
+    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/lib/codemirror.js')
     script(type='text/javascript', charset='utf-8', src='assets/js/zen-coding/zen_codemirror.min.js')
-    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/util/formatting.js')
-    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/util/closetag.js')
-    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/util/matchbrackets.js')
-    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/util/simple-hint.js')
-    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/util/javascript-hint.js')
-    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/util/html-hint.js')
-    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/util/dialog.js')
-    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/util/searchcursor.js')
-    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/util/search.js')    
-    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/util/closebrackets.js')    
+    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/addon/format/formatting.js')
+    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/addon/edit/closetag.js')
+    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/addon/edit/matchbrackets.js')
+    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/addon/hint/show-hint.js')
+    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/addon/hint/javascript-hint.js')
+    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/addon/hint/html-hint.js')
+    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/addon/dialog/dialog.js')
+    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/addon/search/searchcursor.js')
+    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/addon/search/search.js')    
+    script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/addon/edit/closebrackets.js')    
     script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/mode/xml/xml.js')
     script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/mode/javascript/javascript.js')
     script(type='text/javascript', charset='utf-8', src='assets/js/codemirror/mode/css/css.js')

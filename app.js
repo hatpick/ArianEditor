@@ -17,7 +17,7 @@ app.configure(function() {
   app.set('view engine', 'jade');
   app.use(express.bodyParser());          
   app.use(express.cookieParser());
-  app.use(express.session({ secret: 'osu-hci-collabcoding' }));
+  app.use(express.session({ secret: 'osu-hci-arianeditor' }));
   app.use(express.methodOverride());
   app.use(require('stylus').middleware({
     src: __dirname + '/public',
@@ -61,8 +61,8 @@ var options = {db: {type: 'none'}}; // See docs for options. {type: 'redis'} to 
 sharejs.attach(app, options);
 var server;
 exec('mongod &', function(err, stdout, stderr) {
-  server = app.listen(8001);
-  console.log('Server running at http://127.0.0.1:8001/');
+  server = app.listen(2727);
+  console.log('Server running at http://127.0.0.1:2727/');
   chatServer.start(server);
 });
 

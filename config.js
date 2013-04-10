@@ -2,7 +2,7 @@ var Config = {};
 
 Config.dbPort = 27017; 
 Config.dbHost = '127.0.0.1';
-Config.dbName = 'collabcoding';
+Config.dbName = 'ArianDb';
 
 
 module.exports = Config;

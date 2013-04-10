@@ -87,10 +87,10 @@ a img
   border: 0px 
   
 #right-items
-  top: 94px
+  top: 95px
   border-left: 1px solid #ddd !important
   background-color: #f8f8f8 !important
-  width: 15px !important
+  width: 17px !important
   position: absolute
   margin-left: -3 px;
   display: none
@@ -134,6 +134,13 @@ a img
   position: relative
   cursor: pointer
   border: 1px solid #347EE0
+
+.CodeMirror-bookmarksIconRequestNotification  
+  height: 1px
+  background-color: rgba(51, 204, 51, 0.3)
+  position: relative
+  cursor: pointer
+  border: 1px solid #29A329
   
 .CodeMirror-commentsGutter
   width: 200px  
@@ -142,7 +149,7 @@ a img
   border-right: 1px solid #dbdbdb
 
 .CodeMirror-lockedCodeGutter
-  width: 1px
+  width: 16px
 
 .CodeMirror-erroricon
   border-radius: 10px
@@ -154,6 +161,9 @@ a img
 .CodeMirror-commentsiconsGutter
   width: 16px
   margin-left: 1px !important
+  
+.CodeMirror-requestNotificationGutter
+  width: 16px  
 
 .CodeMirror-commentsicons  
   outline: none    
@@ -168,11 +178,23 @@ a img
   background-color : #fefefe
   border : 1px solid #fdfdfd
   
+.lockedCodeMarker-Icon
+  outline: none    
+  background-image: url('../img/code-lock.png')
+  height: 14px
+  width: 14px
+    
 .lockedCodeMarker
   background-color: rgba(52, 126, 224, 0.4) !important
-  background-image: url('../img/code-lock.png')
-  background-repeat: no-repeat  
-  background-position: right
+
+.notificationRequestMarker
+  background-color: rgba(51, 204, 51, 0.4) !important
+  
+.notificationRequestMarker-Icon
+  outline: none    
+  background-image: url('../img/notifReq-icon.png')
+  height: 14px
+  width: 14px     
 
 .left-splitter
   width: 5px
@@ -270,6 +292,7 @@ a img
 
 .CodeMirror
   // height: 100%
+  border: 1px solid #ddd
   font-size: 14px
   background-color: #FFFFFF
   opacity: .95
@@ -338,7 +361,7 @@ a img
   position: absolute
   margin-left: 5px
   margin-right: 5px
-  min-width: 500px
+  min-width: 500px  
 
 #editor-area .tab-content
   border: 1px solid #D1D1D1

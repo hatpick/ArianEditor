@@ -1,17 +1,17 @@
 {
-  "name": "CollabCoding",
-  "version": "0.0.1",
-  "description": "Collaborated Coding",
+  "name": "ArianEditor",
+  "version": "0.1.0",
+  "description": "Collaborative Code Editor",
   "main": "index.js",
   "scripts": {
     "test": "nodeunit tests.coffee"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/hatpick/CollabCoding.git"
+    "url": "https://github.com/hatpick/ArianEditor.git"
   },
   "keywords": [
-    "Collaborate"
+    "Collaborate", "Code", "Editor", "ArianEditor", "CodeEditor", "Pair programming"
   ],
   "author": "hatpick <hatpick@gmail.com>",
   "license": "MIT",

@@ -30,7 +30,7 @@ ProjectProvider = function(host, port) {
       }
     });
   } else {
-    this.db= new Db('collabcoding', new Server(host, port, {auto_reconnect: true}, {}));
+    this.db= new Db('ArianDb', new Server(host, port, {auto_reconnect: true}, {}));
     this.db.open(function(){});     
   }
 };        

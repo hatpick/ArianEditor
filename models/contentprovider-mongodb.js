@@ -36,7 +36,7 @@ ContentProvider = function(host, port) {
             }
         });
     } else {
-        this.db = new Db('collabcoding', new Server(host, port, {
+        this.db = new Db('ArianDb', new Server(host, port, {
             auto_reconnect : true
         }, {}));
         this.db.open(function() {
@@ -155,16 +155,15 @@ ContentProvider.prototype.newXML = function(data, callback) {
         else 
         {
             var content = {}, contents = [];
-            content.shareJSId = data.shareJSId;
+            content.shareJSId = sid = data.shareJSId;
             content.snapshot = data.snapshot;
             content.content = data.content;
             content.timestamp = data.timestamp;
-            content.owner = data.owner;
-            content.path = data.path;
+            content.owner = data.owner;            
             content.project = data.project;
             contents.push(content);
             
-            content_collection.find({"owner":data.owner, "path":data.path}).sort({"timestamp":-1}).toArray(function(err, latest){
+            content_collection.find({"owner":data.owner, "shareJSId":sid}).sort({"timestamp":-1}).toArray(function(err, latest){
                 if(error) callback(error + " nothing found!");
                 else {
                     if(latest.length > 0){
@@ -199,7 +198,7 @@ ContentProvider.prototype.save = function(contents, callback) {
                 contents = [contents];
             for (var i = 0; i < contents.length; i++) {
                 content = contents[i];
-                if (!content.timestamp || !content.shareJSId || !content.snapshot || !content.project || !content.owner || !content.path) {                    
+                if (!content.timestamp || !content.shareJSId || !content.snapshot || !content.project || !content.owner) {                    
                     callback("error");
                 }
             }                        
