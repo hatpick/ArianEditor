@@ -368,8 +368,7 @@ function lockCode(lockedCode, lcid, cm) {
 
 function requestNotification(requestNotificationCode, ntid, cm) {    
     var mt = cm.markText(requestNotificationCode.from, requestNotificationCode.to, {
-        className : "chos",
-        readOnly : true
+        className : "chos"        
     });
            
     $.each(mt.lines, function(i, line) {
@@ -622,11 +621,11 @@ function codeToXML(editor) {
                 continue;
             } else if (codeLine.gutterMarkers["CodeMirror-requestNotificationGutter"] !== undefined) {
                 var ntid = $(codeLine.gutterMarkers["CodeMirror-requestNotificationGutter"]).attr("id");
-                var lockedCodeNode = $("<requestNotification>").attr("id", ntid);
+                var requestNotificationNode = $("<requestNotification>").attr("id", ntid);
                 var codeText = "";
                 var j = index, tempLine = codeLine;
                 while (tempLine.gutterMarkers !== undefined && tempLine.gutterMarkers["CodeMirror-requestNotificationGutter"] !== undefined) {
-                    $(lockedCodeNode).append($("<l>").text(tempLine.text));
+                    $(requestNotificationNode).append($("<l>").text(tempLine.text));
                     j++;
                     if (j < codeHTML.length)
                         tempLine = codeHTML[j];
@@ -635,7 +634,7 @@ function codeToXML(editor) {
                 }
                 index = j;
 
-                $(rootDocument).append(lockedCodeNode);
+                $(rootDocument).append(requestNotificationNode);
                 continue;
             }
             
@@ -1080,6 +1079,10 @@ $(document).ready(function() {
                 doc.attach_codemirror(myCodeMirror);
                 myCodeMirror.setOption("readOnly", false);
                 
+                //Allow editing requested notification area
+                myCodeMirror.on("change", function(myCodeMirror, changeObj) {
+                    
+                });                
             }
 
             //Start a transaction by making other open editors readonly
